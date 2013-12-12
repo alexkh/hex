@@ -32,6 +32,10 @@ public:
 
     void winner_print();
 
+	// used in matches between other programs
+	int autoplay(char color, unsigned short board_side = 11,
+						size_t iter = 1000);
+
 protected:
     HexBoard board;
     PlayerType player_X_type, player_O_type;

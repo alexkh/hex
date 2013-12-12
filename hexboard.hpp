@@ -17,6 +17,7 @@ extern const int nb_players;
 
 class HexBoard {
 public:
+	unsigned iter{0};
     HexBoard(unsigned size);
 
     // Play a move, returns true if the game was won.

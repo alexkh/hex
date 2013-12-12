@@ -151,3 +151,133 @@ bool HexGame::char_to_player_type_set(const char c, PlayerType& type)
         return false;
     }
 }
+
+int HexGame::autoplay(char color, unsigned short board_side, size_t iter) {
+	board.iter = iter;
+	char column; // letter representing board column from a-z
+	unsigned short col; // numeric column
+	unsigned short row; // numeric row
+	pair<unsigned, unsigned> move;
+	char c; // used for input processing
+	bool game_over = false; // each player's responsibility to check winner
+	// send handshake message color: name of program by author
+	// this string should uniquely identify the player
+	cout << color << ": hex v0.1 by Gauthier Östervall adapted by AK "
+			"https://github.com/fleutot/hex\n" << flush;
+	if(color == 'X') {
+		// set the player types
+		player_X_type = PlayerType::AI;
+		player_O_type = PlayerType::HUMAN;
+		// wait for other player's handshake message
+		cin >> c; // should be the other player's color
+		if(c != 'O') {
+			cout << "X. E: expecting handshake message from O\n"
+				<< flush;
+			return -2;
+		}
+		cin >> c; // should be ':'
+		if(c != ':') {
+			cout << "X. E: expecting : after O in "
+				"handshake message\n" << flush;
+			return -3;
+		}
+		// ignore the rest of the line
+		cin.clear();
+		cin.ignore(numeric_limits<streamsize>::max(), '\n');
+		// start the timer
+		auto start = std::chrono::steady_clock::now();
+		// make move
+		{
+		    MoveEvaluator evaluator(board, current_player,
+				10000000, 5000u);
+		    move = evaluator.best_move_calculate();
+		}
+		board.play(move, current_player);
+		current_player.swap();
+		// stop the timer
+		auto end = std::chrono::steady_clock::now();
+		int tmilli = std::chrono::duration<double, std::milli>
+			(end - start).count();
+		cout << color << char(move.first + 'a') << (move.second + 1)
+			<< " #1 t=" << tmilli << "ms\n" << flush;
+	} else {
+		// set the player types
+		player_X_type = PlayerType::HUMAN;
+		player_O_type = PlayerType::AI;
+	}
+	int counter = 1; // count the moves
+	while(true) {
+		cin >> c; // other player color
+		cin >> column; // lower case letter represenging board column
+		if(c != (color=='O'? 'X': 'O') || column == ':') {
+			cin.clear();
+			cin.ignore(numeric_limits<streamsize>::max(), '\n');
+			continue;
+		}
+		if(column == '.') { // the other player quits, game over
+			break;
+		}
+		col = column - 'a';
+		if(col >= board_side) {
+			cout << color <<  ". E: " << color <<
+			" received illegal column: '" << c << "'\n";
+			return -4;
+		}
+		cin >> row;
+		if(row > board_side) {
+			cout << color << ". E: " << color <<
+			" received illegal row: '" << row << "'\n";
+			return -5;
+		}
+		c = cin.peek();
+		if(c == '.') { // dot at the end of the other player's move
+			// means that he wins, or maybe he gives up - game over
+			break;
+		}
+		cin.clear();
+		cin.ignore(numeric_limits<streamsize>::max(), '\n');
+		// start the timer
+		auto start = std::chrono::steady_clock::now();
+		if(color == 'X') {
+			++counter;
+		}
+		row--; // convert to 0-based representation
+		// register opponent's move
+		if(board.occupied_check(col, row)) {
+			cout << color << ". E: " << " received illegal "
+				<< "move " << column << row << "\n";
+			return -6;
+		}
+		move.first = col;
+		move.second = row;
+		game_over = board.play(move, current_player);
+		// check if game is over
+		if(game_over) {
+			break;
+		}
+		current_player.swap();
+		// make a move. If I won, add a dot.
+		{
+		    MoveEvaluator evaluator(board, current_player,
+				10000000, 5000u);
+		    move = evaluator.best_move_calculate();
+		}
+		// make move and check if game is over
+		game_over = board.play(move, current_player);
+		current_player.swap();
+		// stop the timer
+		auto end = std::chrono::steady_clock::now();
+		int tmilli = std::chrono::duration<double, std::milli>
+			(end - start).count();
+		cout << color << char(move.first + 'a') << (move.second + 1)
+			<< (game_over? '.': ' ') << '#' << counter
+			<< " t=" << tmilli << "ms\n" << flush;
+		if(game_over) {
+			break;
+		}
+		if(color == 'O') {
+			++counter;
+		}
+	}
+	return 0;
+}

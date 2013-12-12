@@ -24,8 +24,11 @@ pair<unsigned, unsigned> MoveEvaluator::best_move_calculate()
     if (nb_simulations_per_move > max_nb_simulations_per_test) {
         nb_simulations_per_move = max_nb_simulations_per_test;
     }
-    cout << " (" << nb_simulations_per_move << " simulations per tested move)"
-         << flush;
+	if(board.iter > 0) {
+		nb_simulations_per_move = board.iter;
+	}
+//    cout << " (" << nb_simulations_per_move << " simulations per tested move)"
+//         << flush;
 
     board.player_select(tested_player);
 
